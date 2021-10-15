@@ -8,17 +8,22 @@
     <version>1.0.0-SNAPSHOT</version>
   </parent>
   <artifactId>quarkus-xmlsec-deployment</artifactId>
-  <name>Quarkus - Xmlsec - Deployment</name>
+  <name>Quarkus - XMLSec - Deployment</name>
   <dependencies>
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-arc-deployment</artifactId>
+      <artifactId>quarkus-jaxp-deployment</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkiverse.xmlsec</groupId>
       <artifactId>quarkus-xmlsec</artifactId>
-      <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-arc-deployment</artifactId>
+      <scope>test</scope>
+    </dependency>
+
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-junit5-internal</artifactId>
