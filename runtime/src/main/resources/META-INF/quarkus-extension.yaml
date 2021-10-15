@@ -1,9 +1,8 @@
-name: Xmlsec
-#description: Xmlsec ...
+name: XML Security
 metadata:
-#  keywords:
-#    - xmlsec
+  keywords:
+    - xmlsec
 #  guide: ...
-#  categories:
-#    - "miscellaneous"
-#  status: "preview"
+  categories:
+    - "miscellaneous"
+  status: "preview"

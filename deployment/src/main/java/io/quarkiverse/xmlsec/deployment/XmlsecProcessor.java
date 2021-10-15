@@ -1,4 +1,4 @@
-package io.quarkiverse.quarkus.xmlsec.deployment;
+package io.quarkiverse.xmlsec.deployment;
 
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.FeatureBuildItem;

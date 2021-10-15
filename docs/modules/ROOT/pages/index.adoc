@@ -5,13 +5,13 @@ Describe what the extension does here.
 
 == Installation
 
-If you want to use this extension, you need to add the `io.quarkiverse.quarkus-xmlsec:quarkus-xmlsec` extension first.
+If you want to use this extension, you need to add the `io.quarkiverse.xmlsec:quarkus-xmlsec` extension first.
 In your `pom.xml` file, add:
 
 [source,xml]
 ----
 <dependency>
-    <groupId>io.quarkiverse.quarkus-xmlsec</groupId>
+    <groupId>io.quarkiverse.xmlsec</groupId>
     <artifactId>quarkus-xmlsec</artifactId>
 </dependency>
 ----

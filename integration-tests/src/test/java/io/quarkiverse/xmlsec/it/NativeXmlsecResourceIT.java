@@ -1,4 +1,4 @@
-package io.quarkiverse.quarkus.xmlsec.it;
+package io.quarkiverse.xmlsec.it;
 
 import io.quarkus.test.junit.NativeImageTest;
 

@@ -3,12 +3,13 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.quarkiverse.quarkus-xmlsec</groupId>
+    <groupId>io.quarkiverse.xmlsec</groupId>
     <artifactId>quarkus-xmlsec-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
   <artifactId>quarkus-xmlsec</artifactId>
-  <name>Quarkus - Xmlsec - Runtime</name>
+  <name>Quarkus - XMLSec</name>
+  <description>Provides implementation of the primary security standards for XML</description>
   <dependencies>
     <dependency>
       <groupId>io.quarkus</groupId>
