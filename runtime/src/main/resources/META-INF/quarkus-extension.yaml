@@ -1,6 +1,11 @@
-name: XML Security
+artifact: ${project.groupId}:${project.artifactId}:${project.version}
+name: Santuario XML Security
+description: "Native support for Apache Santuario xmlsec library"
 metadata:
   keywords:
+    - santuario
+    - security
+    - xml
     - xmlsec
 #  guide: ...
   categories:
