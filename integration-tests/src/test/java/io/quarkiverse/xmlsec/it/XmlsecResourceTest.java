@@ -16,7 +16,8 @@ import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -27,8 +28,10 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 public class XmlsecResourceTest {
 
-    @Test
-    public void encryptDecryptDom() throws IOException, ParserConfigurationException, SAXException, XPathExpressionException {
+    @ParameterizedTest
+    @EnumSource(Encryption.class)
+    public void encryptDecryptDom(Encryption encryption)
+            throws IOException, ParserConfigurationException, SAXException, XPathExpressionException {
         try (InputStream plaintext = getClass().getClassLoader().getResourceAsStream("plaintext.xml");
                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             IOUtils.copy(plaintext, baos);
@@ -36,13 +39,13 @@ public class XmlsecResourceTest {
             byte[] encrypted = given()
                     .body(plainBytes)
                     .when()
-                    .post("/xmlsec/dom/encrypt")
+                    .post("/xmlsec/" + encryption.name() + "/encrypt")
                     .then()
                     .statusCode(200)
                     .extract().body().asByteArray();
             try (ByteArrayInputStream in = new ByteArrayInputStream(encrypted)) {
 
-                DocumentBuilder builder = XmlsecResource.createDocumentBuilder(false, true);
+                DocumentBuilder builder = Encryption.createDocumentBuilder(false, true);
                 Document encryptedDoc = builder.parse(in);
 
                 XPathFactory xpf = XPathFactory.newInstance();
@@ -62,13 +65,12 @@ public class XmlsecResourceTest {
             byte[] decrypted = given()
                     .body(encrypted)
                     .when()
-                    .post("/xmlsec/dom/decrypt")
+                    .post("/xmlsec/" + encryption.name() + "/decrypt")
                     .then()
                     .statusCode(200)
                     .extract().body().asByteArray();
             try (ByteArrayInputStream in = new ByteArrayInputStream(decrypted)) {
-
-                DocumentBuilder builder = XmlsecResource.createDocumentBuilder(false, true);
+                DocumentBuilder builder = Encryption.createDocumentBuilder(false, true);
                 Document decryptedDoc = builder.parse(in);
                 // Check the CreditCard decrypted ok
                 NodeList nodeList = decryptedDoc.getElementsByTagNameNS("urn:example:po", "CreditCard");
