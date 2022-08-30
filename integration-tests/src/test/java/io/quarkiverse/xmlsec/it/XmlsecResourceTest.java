@@ -80,4 +80,45 @@ public class XmlsecResourceTest {
         }
 
     }
+
+    @ParameterizedTest
+    @EnumSource(EnvelopedSigning.class)
+    public void signVerifyEnveloped(EnvelopedSigning signature)
+            throws IOException, ParserConfigurationException, SAXException, XPathExpressionException {
+
+        try (InputStream plaintext = getClass().getClassLoader().getResourceAsStream("plaintext.xml");
+                ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            IOUtils.copy(plaintext, baos);
+            byte[] plainBytes = baos.toByteArray();
+            byte[] signed = given()
+                    .body(plainBytes)
+                    .when()
+                    .post("/xmlsec/" + signature.name() + "/signEnveloped")
+                    .then()
+                    .statusCode(200)
+                    .extract().body().asByteArray();
+            try (ByteArrayInputStream in = new ByteArrayInputStream(signed)) {
+
+                DocumentBuilder builder = Encryption.createDocumentBuilder(false, true);
+                Document encryptedDoc = builder.parse(in);
+
+                XPathFactory xpf = XPathFactory.newInstance();
+                XPath xpath = xpf.newXPath();
+                xpath.setNamespaceContext(new DSNamespaceContext());
+                Element encElement = (Element) xpath.evaluate("//dsig:Signature", encryptedDoc, XPathConstants.NODE);
+                Assertions.assertNotNull(encElement);
+
+            }
+
+            /* Verify the signature */
+            given()
+                    .body(signed)
+                    .when()
+                    .post("/xmlsec/" + signature.name() + "/verifyEnveloped")
+                    .then()
+                    .statusCode(204);
+
+        }
+    }
+
 }
