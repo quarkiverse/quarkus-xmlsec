@@ -17,9 +17,11 @@ import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.ExtensionSslNativeSupportBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.IndexDependencyBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBundleBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageSecurityProviderBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.RuntimeReinitializedClassBuildItem;
 
 class XmlsecProcessor {
 
@@ -59,12 +61,26 @@ class XmlsecProcessor {
     }
 
     @BuildStep
-    void runtimeInitializedClasses(BuildProducer<RuntimeInitializedClassBuildItem> runtimeInitializedClasses) {
-        runtimeInitializedClasses.produce(new RuntimeInitializedClassBuildItem(XMLSecurityConstants.class.getName()));
+    void runtimeReinitializedClasses(BuildProducer<RuntimeReinitializedClassBuildItem> runtimeReinitializedClasses) {
+        /* XMLSecurityConstants has a SecureRandom field initialized in a static initializer */
+        runtimeReinitializedClasses.produce(new RuntimeReinitializedClassBuildItem(XMLSecurityConstants.class.getName()));
+    }
+
+    @BuildStep
+    void runtimeInitializedClass(BuildProducer<RuntimeInitializedClassBuildItem> runtimeInitializedClass) {
+        runtimeInitializedClass
+                .produce(new RuntimeInitializedClassBuildItem("org.apache.xml.security.stax.impl.InboundSecurityContextImpl"));
     }
 
     @BuildStep
     NativeImageSecurityProviderBuildItem saslSecurityProvider() {
         return new NativeImageSecurityProviderBuildItem(XMLDSigRI.class.getName());
     }
+
+    @BuildStep
+    void resourceBundle(BuildProducer<NativeImageResourceBundleBuildItem> resourceBundle) {
+        resourceBundle.produce(
+                new NativeImageResourceBundleBuildItem("org.apache.xml.security.resource.xmlsecurity"));
+    }
+
 }
