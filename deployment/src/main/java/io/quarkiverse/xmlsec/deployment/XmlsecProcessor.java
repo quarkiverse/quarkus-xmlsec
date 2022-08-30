@@ -1,13 +1,18 @@
 package io.quarkiverse.xmlsec.deployment;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.stream.Stream;
+
 import javax.crypto.spec.GCMParameterSpec;
 import javax.xml.crypto.dsig.spec.XPathType;
 
 import org.apache.jcp.xml.dsig.internal.dom.XMLDSigRI;
 import org.apache.xml.security.c14n.CanonicalizerSpi;
+import org.apache.xml.security.stax.ext.XMLSec;
 import org.apache.xml.security.stax.ext.XMLSecurityConstants;
 import org.apache.xml.security.transforms.TransformSpi;
-import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
 
@@ -17,20 +22,18 @@ import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.ExtensionSslNativeSupportBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.IndexDependencyBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBundleBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageSecurityProviderBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeReinitializedClassBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ServiceProviderBuildItem;
+import io.quarkus.deployment.util.ServiceUtil;
 
 class XmlsecProcessor {
 
     private static final String FEATURE = "xmlsec";
-
-    private static final DotName[] SPI_CLASSES = {
-            DotName.createSimple(CanonicalizerSpi.class.getName()),
-            DotName.createSimple(TransformSpi.class.getName())
-    };
 
     @BuildStep
     FeatureBuildItem feature() {
@@ -51,17 +54,31 @@ class XmlsecProcessor {
     void registerForReflection(BuildProducer<ReflectiveClassBuildItem> reflectiveClass,
             CombinedIndexBuildItem combinedIndex) {
         IndexView index = combinedIndex.getIndex();
-        for (DotName spi : SPI_CLASSES) {
-            for (ClassInfo subclass : index.getAllKnownSubclasses(spi)) {
-                reflectiveClass.produce(new ReflectiveClassBuildItem(false, false, subclass.name().toString()));
-            }
-        }
+
+        Stream.of(
+                CanonicalizerSpi.class.getName(),
+                TransformSpi.class.getName(),
+                org.apache.xml.security.stax.securityToken.SecurityTokenFactory.class.getName())
+                .flatMap(className -> index.getAllKnownSubclasses(DotName.createSimple(className)).stream())
+                .map(classInfo -> classInfo.name().toString())
+                .map(className -> new ReflectiveClassBuildItem(false, false, className))
+                .forEach(reflectiveClass::produce);
+
+        Stream.of(
+                org.apache.xml.security.stax.ext.ResourceResolverLookup.class.getName(),
+                org.apache.xml.security.stax.ext.Transformer.class.getName())
+                .flatMap(className -> index.getAllKnownImplementors(DotName.createSimple(className)).stream())
+                .map(classInfo -> classInfo.name().toString())
+                .map(className -> new ReflectiveClassBuildItem(false, false, className))
+                .forEach(reflectiveClass::produce);
+
         reflectiveClass.produce(new ReflectiveClassBuildItem(false, false,
                 GCMParameterSpec.class.getName(), XPathType[].class.getName()));
     }
 
     @BuildStep
     void runtimeReinitializedClasses(BuildProducer<RuntimeReinitializedClassBuildItem> runtimeReinitializedClasses) {
+        runtimeReinitializedClasses.produce(new RuntimeReinitializedClassBuildItem(XMLSec.class.getName()));
         /* XMLSecurityConstants has a SecureRandom field initialized in a static initializer */
         runtimeReinitializedClasses.produce(new RuntimeReinitializedClassBuildItem(XMLSecurityConstants.class.getName()));
     }
@@ -73,6 +90,34 @@ class XmlsecProcessor {
     }
 
     @BuildStep
+    void nativeImageResources(BuildProducer<NativeImageResourceBuildItem> nativeImageResources) {
+        Stream.of(
+                "bindings/bindings.cat",
+                "bindings/c14n.xjb",
+                "bindings/dsig.xjb",
+                "bindings/dsig11.xjb",
+                "bindings/rsa-pss.xjb",
+                "bindings/security-config.xjb",
+                "bindings/xenc.xjb",
+                "bindings/xenc11.xjb",
+                "bindings/xop.xjb",
+                "bindings/schemas/datatypes.dtd",
+                "bindings/schemas/exc-c14n.xsd",
+                "bindings/schemas/rsa-pss.xsd",
+                "bindings/schemas/xenc-schema.xsd",
+                "bindings/schemas/xenc-schema-11.xsd",
+                "bindings/schemas/xml.xsd",
+                "bindings/schemas/xmldsig11-schema.xsd",
+                "bindings/schemas/xmldsig-core-schema.xsd",
+                "bindings/schemas/XMLSchema.dtd",
+                "bindings/schemas/xop-include.xsd",
+                "schemas/security-config.xsd",
+                "security-config.xml")
+                .map(NativeImageResourceBuildItem::new)
+                .forEach(nativeImageResources::produce);
+    }
+
+    @BuildStep
     NativeImageSecurityProviderBuildItem saslSecurityProvider() {
         return new NativeImageSecurityProviderBuildItem(XMLDSigRI.class.getName());
     }
@@ -81,6 +126,22 @@ class XmlsecProcessor {
     void resourceBundle(BuildProducer<NativeImageResourceBundleBuildItem> resourceBundle) {
         resourceBundle.produce(
                 new NativeImageResourceBundleBuildItem("org.apache.xml.security.resource.xmlsecurity"));
+    }
+
+    @BuildStep
+    void serviceProviders(BuildProducer<ServiceProviderBuildItem> serviceProviders) {
+        Stream.of(
+                javax.xml.validation.SchemaFactory.class)
+                .map(Class::getName)
+                .forEach(serviceName -> {
+                    try {
+                        final Set<String> names = ServiceUtil.classNamesNamedIn(Thread.currentThread().getContextClassLoader(),
+                                ServiceProviderBuildItem.SPI_ROOT + serviceName);
+                        serviceProviders.produce(new ServiceProviderBuildItem(serviceName, new ArrayList<>(names)));
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
     }
 
 }
