@@ -49,5 +49,9 @@ jobs:
           # refresh cache every month to avoid unlimited growth
           key: maven-repo-${{ runner.os }}-${{ steps.get-date.outputs.date }}
 
-      - name: Build with Maven
-        run: mvn -B formatter:validate verify --file pom.xml
+      - name: Build - JVM
+        run: ./mvnw -B formatter:validate install
+
+      - name: Build - Native
+        run: cd integration-tests && ../mvnw -B verify -Pnative -Dquarkus.native.container-build=true
+
