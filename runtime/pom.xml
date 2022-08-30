@@ -5,11 +5,16 @@
     <groupId>io.quarkiverse.xmlsec</groupId>
     <artifactId>quarkus-xmlsec-parent</artifactId>
     <version>999-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>quarkus-xmlsec</artifactId>
   <name>Quarkus - XMLSec</name>
   <description>Provides implementation of the primary security standards for XML</description>
   <dependencies>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-core</artifactId>
+    </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-jaxp</artifactId>
@@ -23,14 +28,13 @@
     <plugins>
       <plugin>
         <groupId>io.quarkus</groupId>
-        <artifactId>quarkus-bootstrap-maven-plugin</artifactId>
-        <version>${quarkus.version}</version>
+        <artifactId>quarkus-extension-maven-plugin</artifactId>
         <executions>
           <execution>
-            <phase>compile</phase>
             <goals>
               <goal>extension-descriptor</goal>
             </goals>
+            <phase>compile</phase>
             <configuration>
               <deployment>${project.groupId}:${project.artifactId}-deployment:${project.version}</deployment>
             </configuration>
@@ -38,6 +42,7 @@
         </executions>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
           <annotationProcessorPaths>

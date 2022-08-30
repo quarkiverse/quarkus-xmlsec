@@ -5,9 +5,11 @@
     <groupId>io.quarkiverse.xmlsec</groupId>
     <artifactId>quarkus-xmlsec-parent</artifactId>
     <version>999-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>quarkus-xmlsec-integration-tests</artifactId>
   <name>Quarkus - XMLSec - Integration Tests</name>
+
   <dependencies>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -16,8 +18,8 @@
     <dependency>
       <groupId>io.quarkiverse.xmlsec</groupId>
       <artifactId>quarkus-xmlsec</artifactId>
-      <version>${project.version}</version>
     </dependency>
+
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-junit5</artifactId>
@@ -29,6 +31,7 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
   <build>
     <plugins>
       <plugin>
@@ -46,7 +49,7 @@
   </build>
   <profiles>
     <profile>
-      <id>native-image</id>
+      <id>native</id>
       <activation>
         <property>
           <name>native</name>
