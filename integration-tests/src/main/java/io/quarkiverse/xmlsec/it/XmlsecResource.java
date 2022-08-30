@@ -90,4 +90,50 @@ public class XmlsecResource {
         return encryption.decrypt(encrypted, "http://www.w3.org/2001/04/xmlenc#aes128-cbc", privateKey);
     }
 
+    /**
+     * Adapted form <a href=
+     * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-encryption/src/test/java/org/apache/coheigea/santuario/xmlencryption/SignatureDOMEnvelopedTest.java">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-encryption/src/test/java/org/apache/coheigea/santuario/xmlencryption/SignatureDOMEnvelopedTest.java</a>
+     * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
+     *
+     * @param plaintext
+     * @return
+     * @throws Exception
+     */
+    @POST
+    @Path("/{signature}/signEnveloped")
+    public byte[] signEnveloped(byte[] plaintext, @PathParam("signature") EnvelopedSigning signature) throws Exception {
+
+        // Set up the Key
+        KeyStore keyStore = KeyStore.getInstance("jks");
+        keyStore.load(
+                this.getClass().getClassLoader().getResource("clientstore.jks").openStream(),
+                "cspass".toCharArray());
+        Key key = keyStore.getKey("myclientkey", "ckpass".toCharArray());
+        X509Certificate cert = (X509Certificate) keyStore.getCertificate("myclientkey");
+        return signature.sign(plaintext, key, cert);
+    }
+
+    /**
+     * Adapted form <a href=
+     * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-encryption/src/test/java/org/apache/coheigea/santuario/xmlencryption/SignatureDOMEnvelopedTest.java">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-encryption/src/test/java/org/apache/coheigea/santuario/xmlencryption/SignatureDOMEnvelopedTest.java</a>
+     * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
+     *
+     * @param plaintext
+     * @return
+     * @throws Exception
+     */
+    @POST
+    @Path("/{signature}/verifyEnveloped")
+    public void verifyEnveloped(byte[] plaintext, @PathParam("signature") EnvelopedSigning signature) throws Exception {
+
+        // Set up the Key
+        KeyStore keyStore = KeyStore.getInstance("jks");
+        keyStore.load(
+                this.getClass().getClassLoader().getResource("clientstore.jks").openStream(),
+                "cspass".toCharArray());
+        Key key = keyStore.getKey("myclientkey", "ckpass".toCharArray());
+        X509Certificate cert = (X509Certificate) keyStore.getCertificate("myclientkey");
+        signature.verify(plaintext, key, cert);
+    }
+
 }

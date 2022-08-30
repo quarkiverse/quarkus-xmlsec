@@ -9,6 +9,7 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.xml.crypto.dsig.spec.XPathType;
 
 import org.apache.jcp.xml.dsig.internal.dom.XMLDSigRI;
+import org.apache.xml.security.algorithms.SignatureAlgorithmSpi;
 import org.apache.xml.security.c14n.CanonicalizerSpi;
 import org.apache.xml.security.stax.ext.XMLSec;
 import org.apache.xml.security.stax.ext.XMLSecurityConstants;
@@ -56,6 +57,7 @@ class XmlsecProcessor {
         IndexView index = combinedIndex.getIndex();
 
         Stream.of(
+                SignatureAlgorithmSpi.class.getName(),
                 CanonicalizerSpi.class.getName(),
                 TransformSpi.class.getName(),
                 org.apache.xml.security.stax.securityToken.SecurityTokenFactory.class.getName())
