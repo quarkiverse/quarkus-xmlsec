@@ -16,14 +16,21 @@
     <module>runtime</module>
   </modules>
   <properties>
-    <compiler-plugin.version>3.8.1</compiler-plugin.version>
+    <quarkus.version>2.12.0.Final</quarkus.version>
+    <xmlsec.version>2.3.1</xmlsec.version>
+
+    <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
+    <maven-enforcer-plugin.version>3.0.0-M3</maven-enforcer-plugin.version>
+    <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
+
+    <!-- maven-compiler-plugin -->
     <maven.compiler.parameters>true</maven.compiler.parameters>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
+
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <quarkus.version>2.12.0.Final</quarkus.version>
-    <xmlsec.version>2.3.1</xmlsec.version>
+
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -34,6 +41,7 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+
       <dependency>
         <groupId>org.apache.santuario</groupId>
         <artifactId>xmlsec</artifactId>
@@ -45,23 +53,68 @@
         <artifactId>quarkus-xmlsec</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>io.quarkiverse.xmlsec</groupId>
+        <artifactId>quarkus-xmlsec-deployment</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
     </dependencies>
   </dependencyManagement>
+
   <build>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven-compiler-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>${maven-enforcer-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven-surefire-plugin.version}</version>
+          <configuration>
+            <systemProperties>
+              <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+            </systemProperties>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>${maven-surefire-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-extension-maven-plugin</artifactId>
+          <version>${quarkus.version}</version>
+          <executions>
+            <execution>
+              <goals>
+                <goal>extension-descriptor</goal>
+              </goals>
+              <phase>compile</phase>
+              <configuration>
+                <deployment>${project.groupId}:${project.artifactId}-deployment:${project.version}</deployment>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
         <plugin>
           <groupId>io.quarkus</groupId>
           <artifactId>quarkus-maven-plugin</artifactId>
           <version>${quarkus.version}</version>
         </plugin>
-        <plugin>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>${compiler-plugin.version}</version>
-        </plugin>
       </plugins>
     </pluginManagement>
   </build>
+
   <profiles>
     <profile>
       <id>it</id>
