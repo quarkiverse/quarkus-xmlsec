@@ -65,6 +65,7 @@ import org.apache.xml.security.transforms.Transforms;
 import org.apache.xml.security.utils.XMLUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 /**
@@ -74,7 +75,7 @@ import org.w3c.dom.NodeList;
  * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureUtils.java">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureUtils.java</a>
  * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
  */
-public enum EnvelopedSigning {
+public enum Signing {
     dom() {
 
         /**
@@ -84,7 +85,67 @@ public enum EnvelopedSigning {
          * structure.
          */
         @Override
-        public byte[] sign(byte[] plaintext, Key key, X509Certificate cert) {
+        public byte[] sign(byte[] plaintext, Key key, X509Certificate cert, List<QName> namesToSign) {
+            try (ByteArrayInputStream in = new ByteArrayInputStream(plaintext)) {
+                Document document = Encryption.createDocumentBuilder(false, false).parse(in);
+
+                XMLSignature sig = new XMLSignature(document, "", javax.xml.crypto.dsig.SignatureMethod.RSA_SHA256,
+                        "http://www.w3.org/2001/10/xml-exc-c14n#");
+                Element root = document.getDocumentElement();
+                root.appendChild(sig.getElement());
+
+                for (QName nameToSign : namesToSign) {
+                    NodeList elementsToSign = document.getDocumentElement().getElementsByTagNameNS(nameToSign.getNamespaceURI(),
+                            nameToSign.getLocalPart());
+                    for (int i = 0; i < elementsToSign.getLength(); i++) {
+                        Element elementToSign = (Element) elementsToSign.item(i);
+                        String id = UUID.randomUUID().toString();
+                        elementToSign.setAttributeNS(null, "Id", id);
+                        elementToSign.setIdAttributeNS(null, "Id", true);
+
+                        Transforms transforms = new Transforms(document);
+                        transforms.addTransform("http://www.w3.org/2001/10/xml-exc-c14n#");
+                        sig.addDocument("#" + id, transforms, "http://www.w3.org/2000/09/xmldsig#sha1");
+                    }
+                }
+
+                sig.sign(key);
+
+                sig.addKeyInfo(cert);
+
+                try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                    XMLUtils.outputDOM(document, baos);
+                    return baos.toByteArray();
+                }
+
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+        }
+
+        /**
+         * Verify the document signature using the DOM API of Apache Santuario - XML Security for Java.
+         */
+        @Override
+        public void verify(byte[] encrypted, X509Certificate cert) {
+
+            System.out.println("=== encrypted \n\n" + new String(encrypted, StandardCharsets.UTF_8));
+
+            verifyDom(encrypted, cert);
+        }
+
+    },
+    domEnveloped() {
+
+        /**
+         * Encrypt the document using the DOM API of Apache Santuario - XML Security for Java.
+         * It encrypts a list of QNames that it finds in the Document via XPath. If a wrappingKey
+         * is supplied, this is used to encrypt the encryptingKey + place it in an EncryptedKey
+         * structure.
+         */
+        @Override
+        public byte[] sign(byte[] plaintext, Key key, X509Certificate cert, List<QName> elementsToSign) {
             try (ByteArrayInputStream in = new ByteArrayInputStream(plaintext)) {
                 Document document = Encryption.createDocumentBuilder(false, false).parse(in);
 
@@ -120,38 +181,12 @@ public enum EnvelopedSigning {
          * Verify the document signature using the DOM API of Apache Santuario - XML Security for Java.
          */
         @Override
-        public void verify(byte[] encrypted, Key privateKey, X509Certificate cert) {
-            try (ByteArrayInputStream in = new ByteArrayInputStream(encrypted)) {
-                DocumentBuilder builder = Encryption.createDocumentBuilder(false, false);
-                Document document = builder.parse(in);
-
-                // Verify using DOM
-                List<QName> namesToSign = new ArrayList<QName>();
-                namesToSign.add(new QName("urn:example:po", "PurchaseOrder"));
-                NodeList sigs = document.getDocumentElement().getElementsByTagNameNS("http://www.w3.org/2000/09/xmldsig#",
-                        "Signature");
-                if (sigs.getLength() == 0) {
-                    throw new IllegalStateException(
-                            "No Signature element found in " + new String(encrypted, StandardCharsets.UTF_8));
-                }
-                Element sigElement = (Element) sigs.item(0);
-
-                XMLSignature signature = new XMLSignature(sigElement, "");
-
-                // Check we have a KeyInfo
-                if (signature.getKeyInfo() == null) {
-                    throw new IllegalStateException("Invalid signature: no key info");
-                }
-                if (!signature.checkSignatureValue(cert)) {
-                    throw new IllegalStateException("Invalid signature");
-                }
-
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+        public void verify(byte[] encrypted, X509Certificate cert) {
+            verifyDom(encrypted, cert);
         }
+
     },
-    jsr105() {
+    jsr105Enveloped() {
         /**
          * Sign an XML Document using the JSR-105 API.
          * <p>
@@ -161,7 +196,7 @@ public enum EnvelopedSigning {
          *
          */
         @Override
-        public byte[] sign(byte[] plaintext, Key key, X509Certificate cert) {
+        public byte[] sign(byte[] plaintext, Key key, X509Certificate cert, List<QName> elementsToSign) {
             try (ByteArrayInputStream in = new ByteArrayInputStream(plaintext)) {
                 Document document = Encryption.createDocumentBuilder(false, false).parse(in);
 
@@ -249,21 +284,13 @@ public enum EnvelopedSigning {
          *
          */
         @Override
-        public void verify(byte[] encrypted, Key privateKey, X509Certificate cert) {
+        public void verify(byte[] encrypted, X509Certificate cert) {
             try (ByteArrayInputStream in = new ByteArrayInputStream(encrypted)) {
                 DocumentBuilder builder = Encryption.createDocumentBuilder(false, false);
                 Document document = builder.parse(in);
 
                 // Verify using DOM
-                List<QName> namesToSign = new ArrayList<QName>();
-                namesToSign.add(new QName("urn:example:po", "PurchaseOrder"));
-                NodeList sigs = document.getDocumentElement().getElementsByTagNameNS("http://www.w3.org/2000/09/xmldsig#",
-                        "Signature");
-                if (sigs.getLength() == 0) {
-                    throw new IllegalStateException(
-                            "No Signature element found in " + new String(encrypted, StandardCharsets.UTF_8));
-                }
-                Element sigElement = (Element) sigs.item(0);
+                Element sigElement = getSignatureElement(encrypted, document);
 
                 XMLValidateContext context = new DOMValidateContext(cert.getPublicKey(), sigElement);
                 context.setProperty("javax.xml.crypto.dsig.cacheReference", Boolean.TRUE);
@@ -358,9 +385,9 @@ public enum EnvelopedSigning {
     private static String signatureId = "_" + UUID.randomUUID().toString();
     private static String signaturePropertyId = "_" + UUID.randomUUID().toString();
 
-    public abstract byte[] sign(byte[] plaintext, Key key, X509Certificate cert);
+    public abstract byte[] sign(byte[] plaintext, Key key, X509Certificate cert, List<QName> elementsToSign);
 
-    public abstract void verify(byte[] encrypted, Key privateKey, X509Certificate cert);
+    public abstract void verify(byte[] encrypted, X509Certificate cert);
 
     private static SignatureProperty getTimestampSignatureProperty(javax.xml.crypto.dsig.XMLSignature xmlSignature) {
         Iterator<?> objects = xmlSignature.getObjects().iterator();
@@ -378,6 +405,54 @@ public enum EnvelopedSigning {
             }
         }
         return null;
+    }
+
+    private static Element getSignatureElement(byte[] encrypted, Document document) {
+        NodeList sigs = document.getDocumentElement().getElementsByTagNameNS("http://www.w3.org/2000/09/xmldsig#",
+                "Signature");
+        if (sigs.getLength() == 0) {
+            throw new IllegalStateException(
+                    "No Signature element found in " + new String(encrypted, StandardCharsets.UTF_8));
+        }
+        return (Element) sigs.item(0);
+    }
+
+    private static void verifyDom(byte[] encrypted, X509Certificate cert) {
+        try (ByteArrayInputStream in = new ByteArrayInputStream(encrypted)) {
+            DocumentBuilder builder = Encryption.createDocumentBuilder(false, false);
+            Document document = builder.parse(in);
+
+            setIds(document.getDocumentElement());
+
+            Element sigElement = getSignatureElement(encrypted, document);
+            XMLSignature signature = new XMLSignature(sigElement, "");
+
+            // Check we have a KeyInfo
+            if (signature.getKeyInfo() == null) {
+                throw new IllegalStateException("Invalid signature: no key info");
+            }
+            if (!signature.checkSignatureValue(cert)) {
+                throw new IllegalStateException("Invalid signature");
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    static void setIds(Element element) {
+
+        if (element.hasAttributeNS(null, "Id")) {
+            element.setIdAttributeNS(null, "Id", true);
+        }
+        final NodeList children = element.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node node = children.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                setIds((Element) node);
+            }
+        }
+
     }
 
 }

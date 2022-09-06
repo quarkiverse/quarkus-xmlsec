@@ -23,7 +23,6 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.crypto.KeyGenerator;
@@ -37,6 +36,8 @@ import javax.xml.namespace.QName;
 @Path("/xmlsec")
 @ApplicationScoped
 public class XmlsecResource {
+
+    public static final List<QName> PAYMENT_INFO = List.of(new QName("urn:example:po", "PaymentInfo"));
 
     private final KeyStore keyStore;
 
@@ -68,9 +69,7 @@ public class XmlsecResource {
         SecretKey secretKey = keygen.generateKey();
 
         // Encrypt using DOM
-        List<QName> namesToEncrypt = new ArrayList<QName>();
-        namesToEncrypt.add(new QName("urn:example:po", "PaymentInfo"));
-        return encryption.encrypt(plaintext, namesToEncrypt, "http://www.w3.org/2001/04/xmlenc#aes128-cbc", secretKey,
+        return encryption.encrypt(plaintext, PAYMENT_INFO, "http://www.w3.org/2001/04/xmlenc#aes128-cbc", secretKey,
                 "http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p", cert.getPublicKey(), false);
     }
 
@@ -100,8 +99,8 @@ public class XmlsecResource {
      * @throws Exception
      */
     @POST
-    @Path("/{signature}/signEnveloped")
-    public byte[] signEnveloped(byte[] plaintext, @PathParam("signature") EnvelopedSigning signature) throws Exception {
+    @Path("/{signature}/sign")
+    public byte[] signEnveloped(byte[] plaintext, @PathParam("signature") Signing signature) throws Exception {
 
         // Set up the Key
         KeyStore keyStore = KeyStore.getInstance("jks");
@@ -110,7 +109,7 @@ public class XmlsecResource {
                 "cspass".toCharArray());
         Key key = keyStore.getKey("myclientkey", "ckpass".toCharArray());
         X509Certificate cert = (X509Certificate) keyStore.getCertificate("myclientkey");
-        return signature.sign(plaintext, key, cert);
+        return signature.sign(plaintext, key, cert, PAYMENT_INFO);
     }
 
     /**
@@ -123,17 +122,16 @@ public class XmlsecResource {
      * @throws Exception
      */
     @POST
-    @Path("/{signature}/verifyEnveloped")
-    public void verifyEnveloped(byte[] plaintext, @PathParam("signature") EnvelopedSigning signature) throws Exception {
+    @Path("/{signature}/verify")
+    public void verifyEnveloped(byte[] plaintext, @PathParam("signature") Signing signature) throws Exception {
 
         // Set up the Key
         KeyStore keyStore = KeyStore.getInstance("jks");
         keyStore.load(
                 this.getClass().getClassLoader().getResource("clientstore.jks").openStream(),
                 "cspass".toCharArray());
-        Key key = keyStore.getKey("myclientkey", "ckpass".toCharArray());
         X509Certificate cert = (X509Certificate) keyStore.getCertificate("myclientkey");
-        signature.verify(plaintext, key, cert);
+        signature.verify(plaintext, cert);
     }
 
 }
