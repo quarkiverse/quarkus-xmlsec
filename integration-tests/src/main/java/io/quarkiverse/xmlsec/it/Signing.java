@@ -58,10 +58,27 @@ import javax.xml.crypto.dsig.spec.C14NMethodParameterSpec;
 import javax.xml.crypto.dsig.spec.TransformParameterSpec;
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.xpath.XPath;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
 
 import org.apache.xml.security.Init;
+import org.apache.xml.security.exceptions.XMLSecurityException;
 import org.apache.xml.security.signature.XMLSignature;
+import org.apache.xml.security.stax.ext.InboundXMLSec;
+import org.apache.xml.security.stax.ext.OutboundXMLSec;
+import org.apache.xml.security.stax.ext.SecurePart;
+import org.apache.xml.security.stax.ext.XMLSec;
+import org.apache.xml.security.stax.ext.XMLSecurityConstants;
+import org.apache.xml.security.stax.ext.XMLSecurityProperties;
+import org.apache.xml.security.stax.impl.securityToken.X509SecurityToken;
+import org.apache.xml.security.stax.securityEvent.SecurityEvent;
+import org.apache.xml.security.stax.securityEvent.SecurityEventConstants;
+import org.apache.xml.security.stax.securityEvent.SecurityEventConstants.Event;
+import org.apache.xml.security.stax.securityEvent.SecurityEventListener;
+import org.apache.xml.security.stax.securityEvent.SignedElementSecurityEvent;
+import org.apache.xml.security.stax.securityEvent.X509TokenSecurityEvent;
+import org.apache.xml.security.stax.securityToken.SecurityTokenConstants;
 import org.apache.xml.security.transforms.Transforms;
 import org.apache.xml.security.utils.XMLUtils;
 import org.w3c.dom.Document;
@@ -80,10 +97,11 @@ public enum Signing {
     dom() {
 
         /**
-         * Encrypt the document using the DOM API of Apache Santuario - XML Security for Java.
-         * It encrypts a list of QNames that it finds in the Document via XPath. If a wrappingKey
-         * is supplied, this is used to encrypt the encryptingKey + place it in an EncryptedKey
-         * structure.
+         * Sign an XML Document using the DOM API.
+         * <p>
+         * Adapted form <a href=
+         * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureDOMTest.java#L42">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureDOMTest.java#L42</a>
+         * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
          */
         @Override
         public byte[] sign(byte[] plaintext, Key key, X509Certificate cert, List<QName> namesToSign) {
@@ -125,9 +143,6 @@ public enum Signing {
 
         }
 
-        /**
-         * Verify the document signature using the DOM API of Apache Santuario - XML Security for Java.
-         */
         @Override
         public void verify(byte[] encrypted, X509Certificate cert) {
             verifyDom(encrypted, cert);
@@ -137,10 +152,11 @@ public enum Signing {
     domEnveloped() {
 
         /**
-         * Encrypt the document using the DOM API of Apache Santuario - XML Security for Java.
-         * It encrypts a list of QNames that it finds in the Document via XPath. If a wrappingKey
-         * is supplied, this is used to encrypt the encryptingKey + place it in an EncryptedKey
-         * structure.
+         * Sign an XML Document using the DOM API.
+         * <p>
+         * Adapted form <a href=
+         * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureDOMEnvelopedTest.java#L50">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureDOMEnvelopedTest.java#L50</a>
+         * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
          */
         @Override
         public byte[] sign(byte[] plaintext, Key key, X509Certificate cert, List<QName> elementsToSign) {
@@ -175,9 +191,6 @@ public enum Signing {
 
         }
 
-        /**
-         * Verify the document signature using the DOM API of Apache Santuario - XML Security for Java.
-         */
         @Override
         public void verify(byte[] encrypted, X509Certificate cert) {
             verifyDom(encrypted, cert);
@@ -191,7 +204,6 @@ public enum Signing {
          * Adapted form <a href=
          * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureJSR105EnvelopedTest.java#L75">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureJSR105EnvelopedTest.java#L75</a>
          * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
-         *
          */
         @Override
         public byte[] sign(byte[] plaintext, Key key, X509Certificate cert, List<QName> namesToSign) {
@@ -259,7 +271,7 @@ public enum Signing {
          * Verify an XML Document signature using the JSR-105 API.
          * <p>
          * Adapted form <a href=
-         * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureJSR105EnvelopedTest.java#L75">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureJSR105EnvelopedTest.java#L75</a>
+         * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureJSR105Test.java#L75">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureJSR105Test.java#L75</a>
          * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
          *
          */
@@ -299,7 +311,6 @@ public enum Signing {
          * Adapted form <a href=
          * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureJSR105EnvelopedTest.java#L75">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureJSR105EnvelopedTest.java#L75</a>
          * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
-         *
          */
         @Override
         public byte[] sign(byte[] plaintext, Key key, X509Certificate cert, List<QName> elementsToSign) {
@@ -431,6 +442,133 @@ public enum Signing {
                 throw new RuntimeException(e);
             }
         }
+    },
+    stax() {
+        /**
+         * Sign an XML Document using the StAX API.
+         * <p>
+         * Adapted form <a href=
+         * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureStAXTest.java#L39">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureStAXTest.java#L39</a>
+         * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
+         */
+        @Override
+        public byte[] sign(byte[] plaintext, Key key, X509Certificate cert, List<QName> namesToSign) {
+            try (ByteArrayInputStream in = new ByteArrayInputStream(plaintext)) {
+
+                // Set up the Configuration
+                XMLSecurityProperties properties = new XMLSecurityProperties();
+                List<XMLSecurityConstants.Action> actions = new ArrayList<XMLSecurityConstants.Action>();
+                actions.add(XMLSecurityConstants.SIGNATURE);
+                properties.setActions(actions);
+
+                properties.setSignatureAlgorithm(SignatureMethod.RSA_SHA256);
+                properties.setSignatureCerts(new X509Certificate[] { cert });
+                properties.setSignatureKey(key);
+                properties.setSignatureKeyIdentifier(
+                        SecurityTokenConstants.KeyIdentifier_X509KeyIdentifier);
+
+                for (QName nameToSign : namesToSign) {
+                    SecurePart securePart = new SecurePart(nameToSign, SecurePart.Modifier.Content);
+                    properties.addSignaturePart(securePart);
+                }
+
+                OutboundXMLSec outboundXMLSec = XMLSec.getOutboundXMLSec(properties);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                XMLStreamWriter xmlStreamWriter = outboundXMLSec.processOutMessage(baos, "UTF-8");
+
+                XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
+                XMLStreamReader xmlStreamReader = xmlInputFactory.createXMLStreamReader(in);
+
+                XmlReaderToWriter.writeAll(xmlStreamReader, xmlStreamWriter);
+                xmlStreamWriter.close();
+
+                return baos.toByteArray();
+
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+        }
+
+        /**
+         * Verify a document using the StAX API.
+         * <p>
+         * Adapted form <a href=
+         * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureStAXTest.java#L39">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureStAXTest.java#L39</a>
+         * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
+         */
+        @Override
+        public void verify(byte[] encrypted, X509Certificate cert) {
+            try (ByteArrayInputStream in = new ByteArrayInputStream(encrypted)) {
+                // Set up the Configuration
+                XMLSecurityProperties properties = new XMLSecurityProperties();
+                List<XMLSecurityConstants.Action> actions = new ArrayList<XMLSecurityConstants.Action>();
+                actions.add(XMLSecurityConstants.SIGNATURE);
+                properties.setActions(actions);
+
+                properties.setSignatureVerificationKey(cert.getPublicKey());
+
+                InboundXMLSec inboundXMLSec = XMLSec.getInboundWSSec(properties);
+
+                XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
+                final XMLStreamReader xmlStreamReader = xmlInputFactory.createXMLStreamReader(in);
+
+                TestSecurityEventListener eventListener = new TestSecurityEventListener();
+                XMLStreamReader securityStreamReader = inboundXMLSec.processInMessage(xmlStreamReader, null, eventListener);
+
+                while (securityStreamReader.hasNext()) {
+                    securityStreamReader.next();
+                }
+                xmlStreamReader.close();
+
+                // Check that what we were expecting to be signed was actually signed
+                List<SignedElementSecurityEvent> signedElementEvents = eventListener
+                        .getSecurityEvents(SecurityEventConstants.SignedElement);
+                if (signedElementEvents == null) {
+                    throw new IllegalStateException("No SignedElement recorded");
+                }
+
+                for (QName nameToSign : XmlsecResource.PAYMENT_INFO) {
+                    boolean found = false;
+                    for (SignedElementSecurityEvent signedElement : signedElementEvents) {
+                        if (signedElement.isSigned()
+                                && nameToSign.equals(getSignedQName(signedElement.getElementPath()))) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        throw new IllegalStateException("Could not find " + nameToSign + " mong signed elements");
+                    }
+                }
+
+                // Check Signing cert
+                X509TokenSecurityEvent tokenEvent = (X509TokenSecurityEvent) eventListener
+                        .getSecurityEvent(SecurityEventConstants.X509Token);
+                if (tokenEvent == null) {
+                    throw new IllegalStateException("tokenEvent is null");
+                }
+
+                if (!(tokenEvent.getSecurityToken() instanceof X509SecurityToken)) {
+                    throw new IllegalStateException("tokenEvent.getSecurityToken() not an instanceof X509SecurityToken");
+                }
+                X509SecurityToken x509SecurityToken = (X509SecurityToken) tokenEvent.getSecurityToken();
+                if (!cert.equals(x509SecurityToken.getX509Certificates()[0])) {
+                    throw new IllegalStateException("Unexpected X509Certificate");
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        private QName getSignedQName(List<QName> qnames) {
+            if (qnames == null || qnames.isEmpty()) {
+                return null;
+            }
+
+            return qnames.get(qnames.size() - 1);
+        }
+
     };
 
     static {
@@ -471,6 +609,13 @@ public enum Signing {
         return (Element) sigs.item(0);
     }
 
+    /**
+     * Verify an XML Document signature using the SOM API.
+     * <p>
+     * Adapted form <a href=
+     * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureUtils.java#L138">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureUtils.java#L138</a>
+     * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
+     */
     private static void verifyDom(byte[] encrypted, X509Certificate cert) {
         try (ByteArrayInputStream in = new ByteArrayInputStream(encrypted)) {
             DocumentBuilder builder = Encryption.createDocumentBuilder(false, false);
@@ -561,4 +706,38 @@ public enum Signing {
         }
     }
 
+    static class TestSecurityEventListener implements SecurityEventListener {
+        private List<SecurityEvent> events = new ArrayList<SecurityEvent>();
+
+        @Override
+        public void registerSecurityEvent(SecurityEvent securityEvent)
+                throws XMLSecurityException {
+            events.add(securityEvent);
+        }
+
+        @SuppressWarnings("unchecked")
+        public <T> T getSecurityEvent(Event securityEvent) {
+            for (SecurityEvent event : events) {
+                if (event.getSecurityEventType() == securityEvent) {
+                    return (T) event;
+                }
+            }
+            return null;
+        }
+
+        @SuppressWarnings("unchecked")
+        public <T> List<T> getSecurityEvents(Event securityEvent) {
+            List<T> foundEvents = new ArrayList<T>();
+            for (SecurityEvent event : events) {
+                if (event.getSecurityEventType() == securityEvent) {
+                    foundEvents.add((T) event);
+                }
+            }
+            return foundEvents;
+        }
+
+        public List<SecurityEvent> getSecurityEvents() {
+            return events;
+        }
+    }
 }
