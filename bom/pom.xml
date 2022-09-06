@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.quarkiverse.xmlsec</groupId>
+        <artifactId>quarkus-xmlsec-parent</artifactId>
+        <version>999-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <artifactId>quarkus-xmlsec-bom</artifactId>
+    <name>Quarkus - XMLSec - BOM</name>
+
+    <properties>
+        <quarkus-xmlsec.version>999-SNAPSHOT</quarkus-xmlsec.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+
+            <dependency>
+                <groupId>org.apache.santuario</groupId>
+                <artifactId>xmlsec</artifactId>
+                <version>${xmlsec.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkiverse.xmlsec</groupId>
+                <artifactId>quarkus-xmlsec</artifactId>
+                <version>${quarkus-xmlsec.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.quarkiverse.xmlsec</groupId>
+                <artifactId>quarkus-xmlsec-deployment</artifactId>
+                <version>${quarkus-xmlsec.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+</project>
