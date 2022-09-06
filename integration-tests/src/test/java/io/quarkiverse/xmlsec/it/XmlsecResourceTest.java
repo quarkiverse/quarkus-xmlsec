@@ -82,8 +82,8 @@ public class XmlsecResourceTest {
     }
 
     @ParameterizedTest
-    @EnumSource(EnvelopedSigning.class)
-    public void signVerifyEnveloped(EnvelopedSigning signature)
+    @EnumSource(Signing.class)
+    public void signVerify(Signing signature)
             throws IOException, ParserConfigurationException, SAXException, XPathExpressionException {
 
         try (InputStream plaintext = getClass().getClassLoader().getResourceAsStream("plaintext.xml");
@@ -93,7 +93,7 @@ public class XmlsecResourceTest {
             byte[] signed = given()
                     .body(plainBytes)
                     .when()
-                    .post("/xmlsec/" + signature.name() + "/signEnveloped")
+                    .post("/xmlsec/" + signature.name() + "/sign")
                     .then()
                     .statusCode(200)
                     .extract().body().asByteArray();
@@ -114,7 +114,7 @@ public class XmlsecResourceTest {
             given()
                     .body(signed)
                     .when()
-                    .post("/xmlsec/" + signature.name() + "/verifyEnveloped")
+                    .post("/xmlsec/" + signature.name() + "/verify")
                     .then()
                     .statusCode(204);
 
