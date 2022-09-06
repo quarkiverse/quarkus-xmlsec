@@ -58,6 +58,7 @@ import javax.xml.crypto.dsig.spec.C14NMethodParameterSpec;
 import javax.xml.crypto.dsig.spec.TransformParameterSpec;
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
+import javax.xml.xpath.XPath;
 
 import org.apache.xml.security.Init;
 import org.apache.xml.security.signature.XMLSignature;
@@ -105,7 +106,7 @@ public enum Signing {
 
                         Transforms transforms = new Transforms(document);
                         transforms.addTransform("http://www.w3.org/2001/10/xml-exc-c14n#");
-                        sig.addDocument("#" + id, transforms, "http://www.w3.org/2000/09/xmldsig#sha1");
+                        sig.addDocument("#" + id, transforms, DigestMethod.SHA256);
                     }
                 }
 
@@ -129,9 +130,6 @@ public enum Signing {
          */
         @Override
         public void verify(byte[] encrypted, X509Certificate cert) {
-
-            System.out.println("=== encrypted \n\n" + new String(encrypted, StandardCharsets.UTF_8));
-
             verifyDom(encrypted, cert);
         }
 
@@ -186,6 +184,114 @@ public enum Signing {
         }
 
     },
+    jsr105() {
+        /**
+         * Sign an XML Document using the JSR-105 API.
+         * <p>
+         * Adapted form <a href=
+         * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureJSR105EnvelopedTest.java#L75">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureJSR105EnvelopedTest.java#L75</a>
+         * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
+         *
+         */
+        @Override
+        public byte[] sign(byte[] plaintext, Key key, X509Certificate cert, List<QName> namesToSign) {
+            try (ByteArrayInputStream in = new ByteArrayInputStream(plaintext)) {
+                Document document = Encryption.createDocumentBuilder(false, false).parse(in);
+
+                XMLSignatureFactory signatureFactory = XMLSignatureFactory.getInstance("DOM");
+                CanonicalizationMethod c14nMethod = signatureFactory
+                        .newCanonicalizationMethod("http://www.w3.org/2001/10/xml-exc-c14n#", (C14NMethodParameterSpec) null);
+
+                KeyInfoFactory keyInfoFactory = signatureFactory.getKeyInfoFactory();
+                X509Data x509Data = keyInfoFactory.newX509Data(Collections.singletonList(cert));
+                javax.xml.crypto.dsig.keyinfo.KeyInfo keyInfo = keyInfoFactory.newKeyInfo(Collections.singletonList(x509Data));
+
+                List<javax.xml.crypto.dsig.Reference> referenceList = new ArrayList<>();
+                for (QName nameToSign : namesToSign) {
+                    NodeList elementsToSign = document.getDocumentElement().getElementsByTagNameNS(nameToSign.getNamespaceURI(),
+                            nameToSign.getLocalPart());
+                    for (int i = 0; i < elementsToSign.getLength(); i++) {
+                        Element elementToSign = (Element) elementsToSign.item(i);
+                        String id = UUID.randomUUID().toString();
+                        elementToSign.setAttributeNS(null, "Id", id);
+                        elementToSign.setIdAttributeNS(null, "Id", true);
+
+                        javax.xml.crypto.dsig.Transform transform = signatureFactory.newTransform(
+                                "http://www.w3.org/2001/10/xml-exc-c14n#", (TransformParameterSpec) null);
+
+                        DigestMethod digestMethod = signatureFactory.newDigestMethod(DigestMethod.SHA256,
+                                null);
+                        javax.xml.crypto.dsig.Reference reference = signatureFactory.newReference(
+                                "#" + id,
+                                digestMethod,
+                                Collections.singletonList(transform),
+                                null,
+                                null);
+                        referenceList.add(reference);
+                    }
+                }
+
+                SignatureMethod signatureMethod = signatureFactory.newSignatureMethod(SignatureMethod.RSA_SHA256, null);
+                SignedInfo signedInfo = signatureFactory.newSignedInfo(c14nMethod, signatureMethod, referenceList);
+
+                javax.xml.crypto.dsig.XMLSignature sig = signatureFactory.newXMLSignature(
+                        signedInfo,
+                        keyInfo,
+                        null,
+                        null,
+                        null);
+
+                XMLSignContext signContext = new DOMSignContext(key, document.getDocumentElement());
+                sig.sign(signContext);
+
+                try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                    XMLUtils.outputDOM(document, baos);
+                    return baos.toByteArray();
+                }
+
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+        }
+
+        /**
+         * Verify an XML Document signature using the JSR-105 API.
+         * <p>
+         * Adapted form <a href=
+         * "https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureJSR105EnvelopedTest.java#L75">https://github.com/coheigea/testcases/blob/master/apache/santuario/santuario-xml-signature/src/test/java/org/apache/coheigea/santuario/xmlsignature/SignatureJSR105EnvelopedTest.java#L75</a>
+         * by <a href="https://github.com/coheigea">Colm O hEigeartaigh</a>
+         *
+         */
+        @Override
+        public void verify(byte[] encrypted, X509Certificate cert) {
+            try (ByteArrayInputStream in = new ByteArrayInputStream(encrypted)) {
+                DocumentBuilder builder = Encryption.createDocumentBuilder(false, false);
+                Document document = builder.parse(in);
+
+                setIds(document.getDocumentElement());
+
+                // Verify using DOM
+                Element sigElement = getSignatureElement(encrypted, document);
+
+                XMLValidateContext context = new DOMValidateContext(cert.getPublicKey(), sigElement);
+                context.setProperty("javax.xml.crypto.dsig.cacheReference", Boolean.TRUE);
+                context.setProperty("org.apache.jcp.xml.dsig.secureValidation", Boolean.TRUE);
+                context.setProperty("org.jcp.xml.dsig.secureValidation", Boolean.TRUE);
+
+                XMLSignatureFactory signatureFactory = XMLSignatureFactory.getInstance("DOM");
+                javax.xml.crypto.dsig.XMLSignature xmlSignature = signatureFactory.unmarshalXMLSignature(context);
+
+                // Check the Signature value
+                if (!xmlSignature.validate(context)) {
+                    throw new IllegalStateException("Invalid signature");
+                }
+
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    },
     jsr105Enveloped() {
         /**
          * Sign an XML Document using the JSR-105 API.
@@ -237,41 +343,6 @@ public enum Signing {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-
-        }
-
-        SignedInfo createSignedInfo(XMLSignatureFactory signatureFactory, KeyInfo keyInfo, String signaturePropertyId)
-                throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
-            CanonicalizationMethod c14nMethod = signatureFactory
-                    .newCanonicalizationMethod("http://www.w3.org/2001/10/xml-exc-c14n#", (C14NMethodParameterSpec) null);
-
-            SignatureMethod signatureMethod = signatureFactory.newSignatureMethod(
-                    javax.xml.crypto.dsig.SignatureMethod.RSA_SHA256,
-                    null);
-
-            Transform transform = signatureFactory.newTransform(Transform.ENVELOPED, (TransformParameterSpec) null);
-
-            DigestMethod digestMethod = signatureFactory.newDigestMethod(DigestMethod.SHA256, null);
-            Reference reference = signatureFactory.newReference(
-                    "",
-                    digestMethod,
-                    Collections.singletonList(transform),
-                    null,
-                    null);
-            Transform objectTransform = signatureFactory.newTransform("http://www.w3.org/2001/10/xml-exc-c14n#",
-                    (TransformParameterSpec) null);
-
-            Reference objectReference = signatureFactory.newReference(
-                    "#" + signaturePropertyId,
-                    digestMethod,
-                    Collections.singletonList(objectTransform),
-                    "http://www.w3.org/2000/09/xmldsig#SignatureProperties",
-                    null);
-            List<Reference> references = new ArrayList<>();
-            references.add(reference);
-            references.add(objectReference);
-
-            return signatureFactory.newSignedInfo(c14nMethod, signatureMethod, references);
 
         }
 
@@ -360,23 +431,6 @@ public enum Signing {
                 throw new RuntimeException(e);
             }
         }
-
-        private void validateTimestamp(SignatureProperty signatureProperty, X509Certificate signingCert)
-                throws CertificateExpiredException, CertificateNotYetValidException {
-            boolean foundValidTimestamp = false;
-            for (Object xmlStructure : signatureProperty.getContent()) {
-                DOMStructure domStructure = (DOMStructure) xmlStructure;
-                if (domStructure.getNode() != null && "Timestamp".equals(domStructure.getNode().getNodeName())) {
-                    String timestampVal = domStructure.getNode().getTextContent();
-                    signingCert.checkValidity(Date.from(Instant.parse(timestampVal)));
-                    foundValidTimestamp = true;
-                }
-            }
-            if (!foundValidTimestamp) {
-                throw new IllegalStateException("Did not find a valid timestamp");
-            }
-        }
-
     };
 
     static {
@@ -453,6 +507,58 @@ public enum Signing {
             }
         }
 
+    }
+
+    private static SignedInfo createSignedInfo(XMLSignatureFactory signatureFactory, KeyInfo keyInfo,
+            String signaturePropertyId)
+            throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+        CanonicalizationMethod c14nMethod = signatureFactory
+                .newCanonicalizationMethod("http://www.w3.org/2001/10/xml-exc-c14n#", (C14NMethodParameterSpec) null);
+
+        SignatureMethod signatureMethod = signatureFactory.newSignatureMethod(
+                SignatureMethod.RSA_SHA256,
+                null);
+
+        Transform transform = signatureFactory.newTransform(Transform.ENVELOPED, (TransformParameterSpec) null);
+
+        DigestMethod digestMethod = signatureFactory.newDigestMethod(DigestMethod.SHA256, null);
+        Reference reference = signatureFactory.newReference(
+                "",
+                digestMethod,
+                Collections.singletonList(transform),
+                null,
+                null);
+        Transform objectTransform = signatureFactory.newTransform("http://www.w3.org/2001/10/xml-exc-c14n#",
+                (TransformParameterSpec) null);
+
+        Reference objectReference = signatureFactory.newReference(
+                "#" + signaturePropertyId,
+                digestMethod,
+                Collections.singletonList(objectTransform),
+                "http://www.w3.org/2000/09/xmldsig#SignatureProperties",
+                null);
+        List<Reference> references = new ArrayList<>();
+        references.add(reference);
+        references.add(objectReference);
+
+        return signatureFactory.newSignedInfo(c14nMethod, signatureMethod, references);
+
+    }
+
+    private static void validateTimestamp(SignatureProperty signatureProperty, X509Certificate signingCert)
+            throws CertificateExpiredException, CertificateNotYetValidException {
+        boolean foundValidTimestamp = false;
+        for (Object xmlStructure : signatureProperty.getContent()) {
+            DOMStructure domStructure = (DOMStructure) xmlStructure;
+            if (domStructure.getNode() != null && "Timestamp".equals(domStructure.getNode().getNodeName())) {
+                String timestampVal = domStructure.getNode().getTextContent();
+                signingCert.checkValidity(Date.from(Instant.parse(timestampVal)));
+                foundValidTimestamp = true;
+            }
+        }
+        if (!foundValidTimestamp) {
+            throw new IllegalStateException("Did not find a valid timestamp");
+        }
     }
 
 }
