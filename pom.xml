@@ -17,7 +17,7 @@
         <module>runtime</module>
     </modules>
     <properties>
-        <quarkus.version>2.12.1.Final</quarkus.version>
+        <quarkus.version>2.12.2.Final</quarkus.version>
         <xmlsec.version>2.3.1</xmlsec.version>
 
         <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
