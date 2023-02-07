@@ -27,11 +27,12 @@ import java.util.List;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import javax.enterprise.context.ApplicationScoped;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.xml.namespace.QName;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 
 @Path("/xmlsec")
 @ApplicationScoped
