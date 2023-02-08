@@ -3,6 +3,9 @@
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/quarkiverse/quarkus-xmlsec/build.yml?style=for-the-badge)
+![Maven Central](https://img.shields.io/maven-central/v/io.quarkiverse.xmlsec/quarkus-xmlsec?style=for-the-badge)
+
 ## Welcome to Quarkiverse!
 
 Congratulations and thank you for creating a new Quarkus extension project in Quarkiverse!
