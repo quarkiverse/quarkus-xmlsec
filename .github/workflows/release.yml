@@ -57,7 +57,7 @@ jobs:
           mvn -B -ntp -pl docs -am generate-resources -Denforcer.skip -Dformatter.skip -Dimpsort.skip
           if ! git diff --quiet docs/modules/ROOT/pages/includes/attributes.adoc; then
             git add docs/modules/ROOT/pages/includes/attributes.adoc
-            git commit -m "Update the latest release version in documentation"
+            git commit -m "Update the latest release version ${{steps.metadata.outputs.current-version}} in documentation"
           fi
 
       - name: Maven release ${{steps.metadata.outputs.current-version}}
@@ -69,4 +69,6 @@ jobs:
           MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
 
       - name: Push changes to ${{github.base_ref}} branch
-        run: git push
+        run: |
+          git push
+          git push origin ${{steps.metadata.outputs.current-version}}
