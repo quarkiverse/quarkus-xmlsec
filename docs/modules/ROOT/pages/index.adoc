@@ -1,6 +1,8 @@
 = Quarkus - Xmlsec
 :extension-status: preview
 
+include::./includes/attributes.adoc[]
+
 Describe what the extension does here.
 
 == Installation
@@ -13,10 +15,11 @@ In your `pom.xml` file, add:
 <dependency>
     <groupId>io.quarkiverse.xmlsec</groupId>
     <artifactId>quarkus-xmlsec</artifactId>
+    <version>{project-version}</version>
 </dependency>
 ----
-
-[[extension-configuration-reference]]
-== Extension Configuration Reference
-
-include::config.adoc[leveloffset=+1, opts=optional]
+//
+// [[extension-configuration-reference]]
+// == Extension Configuration Reference
+//
+// include::includes/quarkus-xmlsec.adoc[leveloffset=+1, opts=optional]
