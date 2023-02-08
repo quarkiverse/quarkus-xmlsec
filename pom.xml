@@ -15,6 +15,7 @@
         <module>bom</module>
         <module>deployment</module>
         <module>runtime</module>
+        <module>docs</module>
     </modules>
     <properties>
         <quarkus.version>3.0.0.Alpha3</quarkus.version>
