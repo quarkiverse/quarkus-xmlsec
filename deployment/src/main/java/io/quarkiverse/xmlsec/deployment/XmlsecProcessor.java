@@ -63,7 +63,7 @@ class XmlsecProcessor {
                 org.apache.xml.security.stax.securityToken.SecurityTokenFactory.class.getName())
                 .flatMap(className -> index.getAllKnownSubclasses(DotName.createSimple(className)).stream())
                 .map(classInfo -> classInfo.name().toString())
-                .map(className -> new ReflectiveClassBuildItem(false, false, className))
+                .map(className -> ReflectiveClassBuildItem.builder(className).build())
                 .forEach(reflectiveClass::produce);
 
         Stream.of(
@@ -71,11 +71,11 @@ class XmlsecProcessor {
                 org.apache.xml.security.stax.ext.Transformer.class.getName())
                 .flatMap(className -> index.getAllKnownImplementors(DotName.createSimple(className)).stream())
                 .map(classInfo -> classInfo.name().toString())
-                .map(className -> new ReflectiveClassBuildItem(false, false, className))
+                .map(className -> ReflectiveClassBuildItem.builder(className).build())
                 .forEach(reflectiveClass::produce);
 
-        reflectiveClass.produce(new ReflectiveClassBuildItem(false, false,
-                GCMParameterSpec.class.getName(), XPathType[].class.getName()));
+        reflectiveClass.produce(ReflectiveClassBuildItem.builder(
+                GCMParameterSpec.class.getName(), XPathType[].class.getName()).build());
     }
 
     @BuildStep
