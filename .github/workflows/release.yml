@@ -6,16 +6,22 @@ on:
     paths:
       - '.github/project.yml'
 
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     name: release
     if: ${{github.event.pull_request.merged == true}}
 
     steps:
-      - uses: radcortez/project-metadata-action@main
+      - uses: radcortez/project-metadata-action@master
         name: Retrieve project metadata
         id: metadata
         with:
@@ -26,9 +32,9 @@ jobs:
 
       - name: Import GPG key
         id: import_gpg
-        uses: crazy-max/ghaction-import-gpg@v3
+        uses: crazy-max/ghaction-import-gpg@v5
         with:
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - uses: actions/setup-java@v3
@@ -45,23 +51,23 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: mvn release:prepare release:perform -DreleaseVersion=${{steps.metadata.outputs.current-version}} -DdevelopmentVersion=${{steps.metadata.outputs.next-version}}
+      - name: Update latest release version in docs
         run: |
-          ./mvnw -B release:prepare release:perform -DpushChanges=false -DlocalCheckout=true -DreleaseVersion=${{steps.metadata.outputs.current-version}} -DdevelopmentVersion=${{steps.metadata.outputs.next-version}}
+          mvn -B -ntp -pl docs -am generate-resources -Denforcer.skip -Dformatter.skip -Dimpsort.skip -Dkeytool.skip -Denforce-non-deployment.skip
+          if ! git diff --quiet docs/modules/ROOT/pages/includes/attributes.adoc; then
+            git add docs/modules/ROOT/pages/includes/attributes.adoc
+            git commit -m "Update the latest release version ${{steps.metadata.outputs.current-version}} in documentation"
+          fi
+
+      - name: Maven release ${{steps.metadata.outputs.current-version}}
+        run: |
+          mvn -B release:prepare -Prelease -DreleaseVersion=${{steps.metadata.outputs.current-version}} -DdevelopmentVersion=${{steps.metadata.outputs.next-version}}
+          mvn -B release:perform -Darguments=-DperformRelease -DperformRelease -Prelease
         env:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push changes to ${{github.base_ref}}
-        uses: ad-m/github-push-action@v0.6.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{github.base_ref}}
-
-      - name: Push tags
-        uses: ad-m/github-push-action@v0.6.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tags: true
-          branch: ${{github.base_ref}}
+      - name: Push changes to ${{github.base_ref}} branch
+        run: |
+          git push
+          git push origin ${{steps.metadata.outputs.current-version}}
