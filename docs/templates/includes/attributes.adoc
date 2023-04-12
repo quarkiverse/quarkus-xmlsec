@@ -1,3 +1,2 @@
+:quarkus-version: ${quarkus.version}
 :project-version: ${release.current-version}
-
-:examples-dir: ./../examples/
