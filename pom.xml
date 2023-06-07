@@ -17,6 +17,13 @@
         <module>runtime</module>
         <module>docs</module>
     </modules>
+
+    <scm>
+        <connection>scm:git:git@github.com:quarkiverse/quarkus-xmlsec.git</connection>
+        <developerConnection>scm:git:git@github.com:quarkiverse/quarkus-xmlsec.git</developerConnection>
+        <url>https://github.com/quarkiverse/quarkus-xmlsec</url>
+    </scm>
+
     <properties>
         <quarkus.version>3.0.3.Final</quarkus.version>
         <xmlsec.version>3.0.2</xmlsec.version>
