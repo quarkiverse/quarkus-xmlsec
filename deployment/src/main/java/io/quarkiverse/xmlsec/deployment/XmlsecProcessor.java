@@ -11,8 +11,6 @@ import javax.xml.crypto.dsig.spec.XPathType;
 import org.apache.jcp.xml.dsig.internal.dom.XMLDSigRI;
 import org.apache.xml.security.algorithms.SignatureAlgorithmSpi;
 import org.apache.xml.security.c14n.CanonicalizerSpi;
-import org.apache.xml.security.stax.ext.XMLSec;
-import org.apache.xml.security.stax.ext.XMLSecurityConstants;
 import org.apache.xml.security.transforms.TransformSpi;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
@@ -28,7 +26,6 @@ import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBundleBuil
 import io.quarkus.deployment.builditem.nativeimage.NativeImageSecurityProviderBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
-import io.quarkus.deployment.builditem.nativeimage.RuntimeReinitializedClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ServiceProviderBuildItem;
 import io.quarkus.deployment.util.ServiceUtil;
 
@@ -76,13 +73,6 @@ class XmlsecProcessor {
 
         reflectiveClass.produce(ReflectiveClassBuildItem.builder(
                 GCMParameterSpec.class.getName(), XPathType[].class.getName()).build());
-    }
-
-    @BuildStep
-    void runtimeReinitializedClasses(BuildProducer<RuntimeReinitializedClassBuildItem> runtimeReinitializedClasses) {
-        runtimeReinitializedClasses.produce(new RuntimeReinitializedClassBuildItem(XMLSec.class.getName()));
-        /* XMLSecurityConstants has a SecureRandom field initialized in a static initializer */
-        runtimeReinitializedClasses.produce(new RuntimeReinitializedClassBuildItem(XMLSecurityConstants.class.getName()));
     }
 
     @BuildStep
