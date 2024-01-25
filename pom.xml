@@ -26,7 +26,7 @@
   </scm>
 
     <properties>
-        <quarkus.version>3.6.7</quarkus.version>
+        <quarkus.version>3.7.0</quarkus.version>
         <xmlsec.version>3.0.3</xmlsec.version>
 
         <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
@@ -35,8 +35,8 @@
 
         <!-- maven-compiler-plugin -->
         <maven.compiler.parameters>true</maven.compiler.parameters>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
