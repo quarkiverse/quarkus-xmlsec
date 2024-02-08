@@ -1,4 +1,4 @@
-# ⚠️ Quarkus XMLSec has moved to https://github.com/quarkiverse/quarkus-cxf/tree/main/extensions/santuario-xmlsec[Quarkus CXF]
+# ⚠️ Quarkus XMLSec has moved to [Quarkus CXF](https://github.com/quarkiverse/quarkus-cxf/tree/main/extensions/santuario-xmlsec)
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
